@@ -227,8 +227,8 @@ async def test_adder(dut):
     chain = setup_chain(FILE_NAME)
 
     # Test case: a=10 (1010), b=6 (0110), sum=16 (10000)
-    a_val = 0b1010
-    b_val = 0b0110
+    a_val = 0b1011
+    b_val = 0b0100
     expected_sum = a_val + b_val  # 16 (0b10000)
 
     # Construct bit_list for the entire scan chain (13 bits)
