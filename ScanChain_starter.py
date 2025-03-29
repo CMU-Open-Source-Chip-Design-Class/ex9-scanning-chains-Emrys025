@@ -234,14 +234,18 @@ async def test_adder(dut):
     # Construct bit_list for the entire scan chain (13 bits)
     bit_list = []
     # bit_list.extend([0] * 5)
-    bit_list.append(0)
-    bit_list.append(1)
-    bit_list.append(0)
-    bit_list.append(1)
-    bit_list.append(0)
-    bit_list.append(1)
-    bit_list.append(1)
-    bit_list.append(0)
+    # bit_list.append(0)
+    # bit_list.append(1)
+    # bit_list.append(0)
+    # bit_list.append(1)
+    # bit_list.append(0)
+    # bit_list.append(1)
+    # bit_list.append(1)
+    # bit_list.append(0)
+    for i in range(4):
+        bit_list.append((b_val >> i) & 1)
+    for i in range(4):
+        bit_list.append((a_val >> i) & 1)
 
     # Load values into the scan chain
     await input_chain(dut, bit_list, ff_index=5)
