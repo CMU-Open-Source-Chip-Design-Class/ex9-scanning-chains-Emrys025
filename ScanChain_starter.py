@@ -252,6 +252,7 @@ async def test_adder(dut):
 
     # Read x_out from the scan chain
     x_bits = await output_chain(dut, ff_index=0, output_length=5)
+    x_bits.reverse()
     x_val = (x_bits[4] << 4) | (x_bits[3] << 3) | (x_bits[2] << 2) | (x_bits[1] << 1) | x_bits[0]
 
     # Verify the result
