@@ -1,5 +1,5 @@
 TOPLEVEL_LANG = verilog
-VERILOG_SOURCES = $(shell pwd)/adder/adder.sv
+VERILOG_SOURCES = $(shell pwd)/adder/adder_out.sv
 TOPLEVEL = adder
 MODULE = ScanChain_starter
 SIM = verilator
