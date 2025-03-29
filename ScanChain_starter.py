@@ -6,8 +6,8 @@ from cocotb.triggers import Timer
 # Make sure to set FILE_NAME
 # to the filepath of the .log
 # file you are working with
-CHAIN_LENGTH = -1
-FILE_NAME    = ""
+CHAIN_LENGTH = 13
+FILE_NAME    = "adder/adder.log"
 
 
 
@@ -122,11 +122,10 @@ def print_chain(chain):
 # Hint: Use the Timer() builtin function
 async def step_clock(dut):
 
-    ######################
-    # TODO: YOUR CODE HERE 
-    ######################
-
-    pass
+    dut.clk.value = 1
+    await Timer(10, units='ns')
+    dut.clk.value = 0
+    await Timer(10, units='ns')
     
 
 #-------------------------------------------------------------------
@@ -137,12 +136,16 @@ async def step_clock(dut):
 #       the specified FF?
         
 async def input_chain_single(dut, bit, ff_index):
-
-    ######################
-    # TODO: YOUR CODE HERE 
-    ######################
-
-    pass
+    # 0 1 2 3 4 5 6 7 8 9 10 11 12
+    # 0 0 0 0 1 0 0 0 0 0 0  0  0
+    dut.scan_en.value = 1
+    for i in range(ff_index + 1):
+        if i == 0:
+            dut.scan_in.value = bit
+        else:
+            dut.scan_in.value = 0
+        await step_clock(dut)
+    dut.scan_en.value = 0
     
 #-------------------------------------------------------------------
 
@@ -154,12 +157,18 @@ async def input_chain_single(dut, bit, ff_index):
 #       the specified FF?
         
 async def input_chain(dut, bit_list, ff_index):
-
-    ######################
-    # TODO: YOUR CODE HERE 
-    ######################
-
-    pass
+    # 0 1 2 3 4 5 6 7 8 9 10 11 12
+    # 1 1 1 1 1 0 0 0 0 0 0  0  0
+    # 0 0 0 0 1 1 1 1 1 0 0  0  0
+    dut.scan_en.value = 1
+    reversed_list = bit_list[::-1]
+    for bit in reversed_list:
+        dut.scan_in.value = bit
+        await step_clock(dut)
+    for _ in range(ff_index):
+        dut.scan_in.value = 0
+        await step_clock(dut)
+    dut.scan_en.value = 0
 
 #-----------------------------------------------
 
@@ -168,12 +177,16 @@ async def input_chain(dut, bit_list, ff_index):
         
 async def output_chain_single(dut, ff_index):
 
-    ######################
-    # TODO: YOUR CODE HERE 
-    ######################
-
-    pass       
-
+    global CHAIN_LENGTH
+    dut.scan_en.value = 1
+    num_shifts = CHAIN_LENGTH - ff_index - 1
+    for _ in range(num_shifts):
+        dut.scan_in.value = 0
+        await step_clock(dut)
+    value = dut.scan_out.value
+    dut.scan_en.value = 0
+    return value
+    
 #-----------------------------------------------
 
 # This function retrieves a single bit value from the
@@ -182,19 +195,29 @@ async def output_chain_single(dut, ff_index):
 #   for Part H of Task 1
         
 async def output_chain(dut, ff_index, output_length):
-
-    ######################
-    # TODO: YOUR CODE HERE 
-    ######################
-
-    pass       
+    # 0 1 2 3 4 5 6 7 8 9 10 11 12
+    # 1 1 1 1 1 0 0 0 0 0 0  0  0
+    # 0 0 0 0 1 1 1 1 1 0 0  0  0
+    global CHAIN_LENGTH
+    dut.scan_en.value = 1
+    initial_shifts = CHAIN_LENGTH - (ff_index+output_length-1) - 1
+    for _ in range(initial_shifts):
+        dut.scan_in.value = 0
+        await step_clock(dut)
+    bits = []
+    for _ in range(output_length):
+        bits.append(int(dut.scan_out.value))
+        dut.scan_in.value = 0
+        await step_clock(dut)
+    dut.scan_en.value = 0
+    return bits  
 
 #-----------------------------------------------
 
 # Your main testbench function
 
 @cocotb.test()
-async def test(dut):
+async def test_adder(dut):
 
     global CHAIN_LENGTH
     global FILE_NAME        # Make sure to edit this guy
@@ -203,7 +226,34 @@ async def test(dut):
     # Setup the scan chain object
     chain = setup_chain(FILE_NAME)
 
-    ######################
-    # TODO: YOUR CODE HERE 
-    ######################
+    # Test case: a=10 (1010), b=6 (0110), sum=16 (10000)
+    a_val = 0b1010
+    b_val = 0b0110
+    expected_sum = a_val + b_val  # 16 (0b10000)
+
+    # Construct bit_list for the entire scan chain (13 bits)
+    bit_list = []
+    # bit_list.extend([0] * 5)
+    bit_list.append(1)
+    bit_list.append(0)
+    bit_list.append(1)
+    bit_list.append(0)
+    bit_list.append(0)
+    bit_list.append(1)
+    bit_list.append(1)
+    bit_list.append(0)
+
+    # Load values into the scan chain
+    await input_chain(dut, bit_list, ff_index=5)
+
+    # Disable scan mode and compute the sum
+    dut.scan_en.value = 0
+    await step_clock(dut)
+
+    # Read x_out from the scan chain
+    x_bits = await output_chain(dut, ff_index=0, output_length=5)
+    # x_val = (x_bits[4] << 4) | (x_bits[3] << 3) | (x_bits[2] << 2) | (x_bits[1] << 1) | x_bits[0]
+
+    # Verify the result
+    assert x_bits == expected_sum, f"Expected {expected_sum} (0b{expected_sum:05b}), got {x_val} (0b{x_val:05b})"
 
