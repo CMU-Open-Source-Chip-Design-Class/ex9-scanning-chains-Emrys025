@@ -234,10 +234,10 @@ async def test_adder(dut):
     # Construct bit_list for the entire scan chain (13 bits)
     bit_list = []
     # bit_list.extend([0] * 5)
-    bit_list.append(1)
     bit_list.append(0)
     bit_list.append(1)
     bit_list.append(0)
+    bit_list.append(1)
     bit_list.append(0)
     bit_list.append(1)
     bit_list.append(1)
