@@ -255,5 +255,5 @@ async def test_adder(dut):
     # x_val = (x_bits[4] << 4) | (x_bits[3] << 3) | (x_bits[2] << 2) | (x_bits[1] << 1) | x_bits[0]
 
     # Verify the result
-    assert x_bits == expected_sum, f"Expected {expected_sum} (0b{expected_sum:05b}), got {x_val} (0b{x_val:05b})"
+    assert x_bits == expected_sum, f"Expected {expected_sum} (0b{expected_sum:05b}), got {x_bits} (0b{x_bits:05b})"
 
