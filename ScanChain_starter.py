@@ -329,13 +329,13 @@ async def test_fault_detection(dut):
 
     fault_map = {
         #a SA1, b SA1, c SA1, e SA0, f SA0, g SA0, h SA0, x SA0 
-        (0, 1, 0): ["a SA1", "b SA1", "c SA1", "e SA0", "f SA0", "g SA0", "h SA0", "x SA0"],
+        0: ["a SA1", "b SA1", "c SA1", "e SA0", "f SA0", "g SA0", "h SA0", "x SA0"],
         # a SA0, b SA1, e SA1, f SA1, x SA1 
-        (1, 0, 1): ["a SA0", "b SA1", "e SA1", "f SA1", "x SA1"],
+        1: ["a SA0", "b SA1", "e SA1", "f SA1", "x SA1"],
         # c SA0, d SA1, g SA1, h SA1, x SA1
-        (2, 0, 1): ["c SA0", "d SA1", "g SA1", "h SA1", "x SA1"],
+        2: ["c SA0", "d SA1", "g SA1", "h SA1", "x SA1"],
         # a SA0, b SA0, d SA0, e SA1, f SA0, h SA0, x SA0
-        (3, 1, 0): ["a SA0", "b SA0", "d SA0", "e SA1", "f SA0", "h SA0", "x SA0"],
+        3: ["a SA0", "b SA0", "d SA0", "e SA1", "f SA0", "h SA0", "x SA0"],
     }
 
     for idx, (inputs, expected) in enumerate(test_vectors):
@@ -348,7 +348,7 @@ async def test_fault_detection(dut):
         actual = dut.x.value
         if actual != expected:
             print(f"Fault detected with vector {inputs}: expected {expected}, got {actual}")
-            possible_faults = fault_map.get((idx, expected, actual), [])
+            possible_faults = fault_map.get(idx, [])
             print(f"Possible faults: {', '.join(possible_faults)}")
         else:
             print(f"Vector {inputs} passed")
