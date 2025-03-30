@@ -265,7 +265,7 @@ async def test_adder(dut):
 @cocotb.test()
 async def test_hidden_fsm(dut):
     global CHAIN_LENGTH, FILE_NAME
-    FILE_NAME = "hidden_fsm.log"
+    FILE_NAME = "hidden_fsm/hidden_fsm.log"
     chain = setup_chain(FILE_NAME)
     CHAIN_LENGTH = 3
 
