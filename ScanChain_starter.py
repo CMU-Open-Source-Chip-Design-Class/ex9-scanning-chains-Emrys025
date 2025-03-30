@@ -216,7 +216,7 @@ async def output_chain(dut, ff_index, output_length):
 
 # Your main testbench function
 
-@cocotb.test()
+# @cocotb.test()
 async def test_adder(dut):
 
     global CHAIN_LENGTH
@@ -226,12 +226,11 @@ async def test_adder(dut):
     # Setup the scan chain object
     chain = setup_chain(FILE_NAME)
 
-    # Test case: a=10 (1010), b=6 (0110), sum=16 (10000)
     a_val = 0b1011
     b_val = 0b0100
-    expected_sum = a_val + b_val  # 16 (0b10000)
+    expected_sum = a_val + b_val  
 
-    # Construct bit_list for the entire scan chain (13 bits)
+    # Construct bit_list for the entire scan chain
     bit_list = []
     # bit_list.extend([0] * 5)
     # bit_list.append(0)
@@ -261,4 +260,72 @@ async def test_adder(dut):
 
     # Verify the result
     assert x_val == expected_sum, f"Expected {expected_sum} (0b{expected_sum:05b}), got {x_val} (0b{x_val:05b})"
+    
+    
+@cocotb.test()
+async def test_hidden_fsm(dut):
+    global CHAIN_LENGTH, FILE_NAME
+    FILE_NAME = "hidden_fsm.log"
+    chain = setup_chain(FILE_NAME)
+    CHAIN_LENGTH = 3
+
+    # Identify state register bits from .log file
+    state_bit_indices = []
+    for name in chain.registers:
+        if "state" in name.lower():  # Assumes state register name contains "state"
+            state_reg = chain.registers[name]
+            state_bit_indices = state_reg.index_list
+            break
+    state_bit_count = len(state_bit_indices)
+
+    # Test all possible states and inputs
+    transitions = []
+    for state in range(2**state_bit_count):
+        for data_avail in [0, 1]:
+            # Initialize scan chain with current state
+            bit_list = [0] * CHAIN_LENGTH
+            for i, idx in enumerate(state_bit_indices):
+                bit_list[idx] = (state >> i) & 1  # LSB first
+            await input_chain(dut, bit_list, ff_index=0)
+
+            # Capture outputs before clock step (Moore machine)
+            dut.scan_en.value = 0
+            await Timer(1, units='ns') 
+            outputs = {
+                'buf_en': dut.buf_en.value,
+                'out_sel': dut.out_sel.value,
+                'out_writing': dut.out_writing.value
+            }
+
+            # Apply input and step clock
+            dut.data_avail.value = data_avail
+            await step_clock(dut)
+
+            # Read new state
+            # dut.scan_en.value = 1
+            # shifts_needed = CHAIN_LENGTH - state_bit_indices[0] - 1
+            # for _ in range(shifts_needed):
+            #     dut.scan_in.value = 0
+            #     await step_clock(dut)
+            # new_state_bits = [int(dut.scan_out.value)]
+            # for _ in range(state_bit_count - 1):
+            #     dut.scan_in.value = 0
+            #     await step_clock(dut)
+            #     new_state_bits.append(int(dut.scan_out.value))
+            # new_state = sum(bit << i for i, bit in enumerate(new_state_bits))
+            new_state_bits = []
+            new_state_bits = await output_chain(dut, ff_index=0, output_length=state_bit_count)
+            new_state = sum(bit << i for i, bit in enumerate(new_state_bits))
+
+            # Record transition
+            transitions.append({
+                'current_state': bin(state),
+                'input': data_avail,
+                'next_state': bin(new_state),
+                'outputs': outputs
+            })
+
+    # Print results
+    for t in transitions:
+        print(f"State: {t['current_state']}, Input: {t['input']} -> Next: {t['next_state']}, Outputs: {t['outputs']}")
 
