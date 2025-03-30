@@ -262,17 +262,17 @@ async def test_adder(dut):
     assert x_val == expected_sum, f"Expected {expected_sum} (0b{expected_sum:05b}), got {x_val} (0b{x_val:05b})"
     
     
-@cocotb.test()
+# @cocotb.test()
 async def test_hidden_fsm(dut):
     global CHAIN_LENGTH, FILE_NAME
     FILE_NAME = "hidden_fsm/hidden_fsm.log"
     chain = setup_chain(FILE_NAME)
     CHAIN_LENGTH = 3
 
-    # Identify state register bits from .log file
+    # General Method to identify state register bits from .log file
     state_bit_indices = []
     for name in chain.registers:
-        if "state" in name.lower():  # Assumes state register name contains "state"
+        if "state" in name.lower(): 
             state_reg = chain.registers[name]
             state_bit_indices = state_reg.index_list
             break
@@ -285,10 +285,10 @@ async def test_hidden_fsm(dut):
             # Initialize scan chain with current state
             bit_list = [0] * CHAIN_LENGTH
             for i, idx in enumerate(state_bit_indices):
-                bit_list[idx] = (state >> i) & 1  # LSB first
+                bit_list[idx] = (state >> i) & 1
             await input_chain(dut, bit_list, ff_index=0)
 
-            # Capture outputs before clock step (Moore machine)
+            # Propagate outputs
             dut.scan_en.value = 0
             await Timer(1, units='ns') 
             outputs = {
@@ -302,22 +302,11 @@ async def test_hidden_fsm(dut):
             await step_clock(dut)
 
             # Read new state
-            # dut.scan_en.value = 1
-            # shifts_needed = CHAIN_LENGTH - state_bit_indices[0] - 1
-            # for _ in range(shifts_needed):
-            #     dut.scan_in.value = 0
-            #     await step_clock(dut)
-            # new_state_bits = [int(dut.scan_out.value)]
-            # for _ in range(state_bit_count - 1):
-            #     dut.scan_in.value = 0
-            #     await step_clock(dut)
-            #     new_state_bits.append(int(dut.scan_out.value))
-            # new_state = sum(bit << i for i, bit in enumerate(new_state_bits))
             new_state_bits = []
             new_state_bits = await output_chain(dut, ff_index=0, output_length=state_bit_count)
             new_state = sum(bit << i for i, bit in enumerate(new_state_bits))
 
-            # Record transition
+            # Prepare for print
             transitions.append({
                 'current_state': bin(state),
                 'input': data_avail,
@@ -325,7 +314,42 @@ async def test_hidden_fsm(dut):
                 'outputs': outputs
             })
 
-    # Print results
     for t in transitions:
         print(f"State: {t['current_state']}, Input: {t['input']} -> Next: {t['next_state']}, Outputs: {t['outputs']}")
+
+
+@cocotb.test()
+async def test_fault_detection(dut):
+    test_vectors = [
+        ((0, 0, 0, 0), 1),   
+        ((1, 0, 0, 0), 0),  
+        ((1, 1, 1, 0), 0),
+        ((1, 1, 1, 1), 1),
+    ]
+
+    fault_map = {
+        #a SA1, b SA1, c SA1, e SA0, f SA0, g SA0, h SA0, x SA0 
+        (0, 1, 0): ["a SA1", "b SA1", "c SA1", "e SA0", "f SA0", "g SA0", "h SA0", "x SA0"],
+        # a SA0, b SA1, e SA1, f SA1, x SA1 
+        (1, 0, 1): ["a SA0", "b SA1", "e SA1", "f SA1", "x SA1"],
+        # c SA0, d SA1, g SA1, h SA1, x SA1
+        (2, 0, 1): ["c SA0", "d SA1", "g SA1", "h SA1", "x SA1"],
+        # a SA0, b SA0, d SA0, e SA1, f SA0, h SA0, x SA0
+        (3, 1, 0): ["a SA0", "b SA0", "d SA0", "e SA1", "f SA0", "h SA0", "x SA0"],
+    }
+
+    for idx, (inputs, expected) in enumerate(test_vectors):
+        a, b, c, d = inputs
+        dut.a.value = a
+        dut.b.value = b
+        dut.c.value = c
+        dut.d.value = d
+        await Timer(1, units="ns")
+        actual = dut.x.value
+        if actual != expected:
+            print(f"Fault detected with vector {inputs}: expected {expected}, got {actual}")
+            possible_faults = fault_map.get((idx, expected, actual), [])
+            print(f"Possible faults: {', '.join(possible_faults)}")
+        else:
+            print(f"Vector {inputs} passed")
 
