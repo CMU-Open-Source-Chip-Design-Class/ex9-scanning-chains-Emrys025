@@ -1,5 +1,5 @@
 TOPLEVEL_LANG = verilog
-VERILOG_SOURCES = $(shell pwd)/fault/fault4.sv
+VERILOG_SOURCES = $(shell pwd)/fault/fault5.sv
 TOPLEVEL = fault
 MODULE = ScanChain_starter
 SIM = verilator
